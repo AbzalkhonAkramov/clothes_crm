@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Order{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'order_list' %}">Orders</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'order_detail' order.id %}">Order #{{ order.id }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+    
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete Order</h4>
+        </div>
+        <div class="card-body">
+            <p class="lead">Are you sure you want to delete Order #{{ order.id }}?</p>
+            <p>This action cannot be undone. The product stock will be restored.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete
+                </button>
+                <a href="{% url 'order_detail' order.id %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

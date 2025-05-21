@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Worker{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'worker_list' %}">Workers</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'worker_detail' worker.id %}">{{ worker.full_name }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+    
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete Worker</h4>
+        </div>
+        <div class="card-body">
+            <p class="lead">Are you sure you want to delete the worker "{{ worker.full_name }}"?</p>
+            <p>This action cannot be undone. All related orders and attendance records will also be deleted.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete
+                </button>
+                <a href="{% url 'worker_detail' worker.id %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

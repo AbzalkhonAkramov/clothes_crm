@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ worker.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'worker_list' %}">Workers</a></li>
+            <li class="breadcrumb-item active">{{ worker.full_name }}</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-person"></i> {{ worker.full_name }}</h1>
+        <div>
+            <a href="{% url 'worker_update' worker.id %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a href="{% url 'worker_delete' worker.id %}" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-info-circle"></i> Worker Information
+                </div>
+                <div class="card-body">
+                    <p><strong>Full Name:</strong> {{ worker.full_name }}</p>
+                    <p><strong>Position:</strong> {{ worker.position }}</p>
+                    <p><strong>Phone Number:</strong> {{ worker.phone_number }}</p>
+                    <p><strong>Join Date:</strong> {{ worker.join_date }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <i class="bi bi-calendar-check"></i> Recent Attendance
+                </div>
+                <div class="card-body">
+                    {% if attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in attendance %}
+                                        <tr>
+                                            <td>{{ record.date }}</td>
+                                            <td>
+                                                {% if record.status == 'present' %}
+                                                    <span class="badge bg-success">Present</span>
+                                                {% elif record.status == 'absent' %}
+                                                    <span class="badge bg-danger">Absent</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Late</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No attendance records found.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-cart"></i> Recent Orders
+                </div>
+                <div class="card-body">
+                    {% if orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order #</th>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in orders %}
+                                        <tr>
+                                            <td>{{ order.id }}</td>
+                                            <td>{{ order.product.name }}</td>
+                                            <td>{{ order.quantity }}</td>
+                                            <td>{{ order.order_date }}</td>
+                                            <td>
+                                                {% if order.status == 'pending' %}
+                                                    <span class="badge bg-warning">Pending</span>
+                                                {% elif order.status == 'completed' %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Cancelled</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No orders found for this worker.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
