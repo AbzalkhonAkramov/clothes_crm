@@ -1,0 +1,2 @@
+from payments.views.call_back import PaymeCallBackAPIView, ClickCallBackAPIView, OrderStatusCheckAPIView
+from payments.views.pay_link import GeneratePayLinkAPIView, GenerateClickPayLinkAPIView

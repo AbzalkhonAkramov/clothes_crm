@@ -1,0 +1,197 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-}" ]
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-}", "PING" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: ganiyevuz/kotib-backend:latest
+    restart: unless-stopped
+    command: /bin/bash -c "./wait_for_db.sh db && python manage.py makemigrations && python manage.py migrate && gunicorn conf.wsgi:application --bind 0.0.0.0:8000 -w 4 --threads 4"
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CACHE_BACKEND_URL: ${CACHE_BACKEND_URL}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      UZBEK_VOICE_KEY: ${UZBEK_VOICE_KEY}
+      PAYME_ID: ${PAYME_ID}
+      PAYME_KEY: ${PAYME_KEY}
+      PAYME_URL: ${PAYME_URL}
+      PAYME_CALL_BACK_URL: ${PAYME_CALL_BACK_URL}
+      PAYME_MIN_AMOUNT: ${PAYME_MIN_AMOUNT}
+      PAYME_ACCOUNT: ${PAYME_ACCOUNT}
+      CLICK_SERVICE_ID: ${CLICK_SERVICE_ID}
+      CLICK_MERCHANT_ID: ${CLICK_MERCHANT_ID}
+      CLICK_SECRET_KEY: ${CLICK_SECRET_KEY}
+      CLICK_MERCHANT_USER_ID: ${CLICK_MERCHANT_USER_ID}
+
+    networks:
+      - app-network
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.web.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.web.entrypoints: "websecure"
+      traefik.http.routers.web.tls.certresolver: "le"
+      traefik.http.services.web.loadbalancer.server.port: "8000"
+
+#  frontend:
+#    image: ganiyevuz/tana-frontend:latest
+#    restart: unless-stopped
+#    networks:
+#      - app-network
+#    depends_on:
+#      web:
+#        condition: service_started
+#    labels:
+#      traefik.enable: "true"
+#      traefik.http.routers.frontend.rule: "Host(`${FRONTEND_DOMAIN}`)"
+#      traefik.http.routers.frontend.entrypoints: "websecure"
+#      traefik.http.routers.frontend.tls.certresolver: "le"
+#      traefik.http.services.frontend.loadbalancer.server.port: "80"
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: media_volume
+        target: /usr/share/nginx/html/media
+        read_only: true
+        volume:
+          nocopy: true
+      - type: volume
+        source: static_volume
+        target: /usr/share/nginx/html/static
+        read_only: true
+        volume:
+          nocopy: true
+      - ./nginx_logs:/var/log/nginx
+      - ./server/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app-network
+    depends_on:
+      web:
+        condition: service_started
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.staticfiles.rule: "PathPrefix(`/static/`) || PathPrefix(`/media/`)"
+      traefik.http.routers.staticfiles.entrypoints: "web"
+      traefik.http.routers.staticfiles.priority: "2"
+
+  traefik:
+    image: traefik:v2.10
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=admin@tana.com"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--log.level=DEBUG"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - app-network
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik-dashboard.rule: "Host(`dashboard.housemobile.uz`)"
+      traefik.http.routers.traefik-dashboard.entrypoints: "web"
+      traefik.http.routers.traefik-dashboard.tls: "true"
+      traefik.http.routers.traefik-dashboard.service: "api@internal"
+
+  db_backup:
+    image: prodrigestivill/postgres-backup-local
+    restart: unless-stopped
+    user: postgres:postgres
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: "7"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "3"
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      WEBHOOK_URL_START: "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=Backup%20Started"
+      WEBHOOK_URL_SUCCESS: "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=Backup%20Completed%20Successfully"
+      WEBHOOK_URL_ERROR: "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=Backup%20Failed"
+    volumes:
+      - /var/opt/pgbackups:/backups:rw
+      - ./send_backup.sh:/send_backup.sh
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

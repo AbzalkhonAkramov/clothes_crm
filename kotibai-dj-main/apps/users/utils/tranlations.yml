@@ -1,0 +1,20 @@
+payment_confirmation:
+  uz:
+    message: "To'lov uchun rahmat! \n<b>To'lov sanasi:</b> {payment_date}\n- <b>To'lov miqdori:</b> {payment_amount} so'm</b>, va sizning hisobingiz <b>{time_traffic}</b> bilan to'ldirildi"
+  ru:
+    message: "Спасибо за ваш платеж! \n<b>Дата платежа:</b> {payment_date}\n- <b>Сумма платежа:</b> {payment_amount} сум, и ваш счет был пополнен на <b>{time_traffic}</b>"
+  en:
+    message: "Thank you for your payment! \n<b><b>Payment Date:</b> {payment_date}\n- <b>Payment Amount:</b> {payment_amount} sum, and your account has been credited with <b>{time_traffic}</b>"
+
+payment_cancelled:
+  uz:
+    message: "Sizning to'lov amalingiz bekor qilindi."
+  ru:
+    message: "Ваша платежная транзакция была отменена."
+  en:
+    message: "Your payment transaction has been cancelled."
+
+uzbek_voice_error:
+  uz: "Kechirasiz, so'rovingiz qabul qilinmadi, bot sifatini yaxshilash maqsadida texnik ishlar barjarilmoqda. Birozdan so'ng urinib ko'ring."
+  ru: "Извините, ваш запрос не был принят. В целях повышения качества сервиса в настоящий момент проводятся технические работы. Пожалуйста, попробуйте повторить запрос немного позже."
+  en: "Apologies, your request cannot be processed at the moment due to ongoing technical maintenance aimed at improving the bot’s performance. Please try again shortly."
